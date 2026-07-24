@@ -1,8 +1,28 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Calculator, ArrowLeft } from "lucide-react";
-import { MortgageCalculator } from "@/components/mortgage-calculator";
+import { Suspense } from "react";
+import dynamic from "next/dynamic";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const MortgageCalculator = dynamic(
+  () =>
+    import("@/components/mortgage-calculator").then(
+      (mod) => mod.MortgageCalculator,
+    ),
+  {
+    loading: () => (
+      <div className="grid gap-8 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+        </div>
+        <div className="lg:col-span-2">
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+        </div>
+      </div>
+    ),
+  },
+);
 
 export const metadata: Metadata = {
   title: "Mortgage Repayments Calculator — FinanceCalc",
@@ -13,29 +33,7 @@ export const metadata: Metadata = {
 export default function MortgageRepaymentsCalculatorPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Calculator className="h-4 w-4" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">
-              FinanceCalc
-            </span>
-          </div>
-          <Button size="sm" variant="ghost" asChild>
-            <Link href="/">Home</Link>
-          </Button>
-        </div>
-      </header>
-
+      <Header />
       <main className="flex-1">
         <div className="mx-auto max-w-5xl px-6 py-12">
           <div className="mb-10">
@@ -48,9 +46,12 @@ export default function MortgageRepaymentsCalculatorPage() {
             </p>
           </div>
 
-          <MortgageCalculator />
+          <Suspense>
+            <MortgageCalculator />
+          </Suspense>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

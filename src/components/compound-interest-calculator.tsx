@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,16 +16,11 @@ import {
   Percent,
   Calendar,
   Calculator,
+  Share2,
 } from "lucide-react";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import { InputWithIcon } from "@/components/input-with-icon";
+import { formatCurrency, parseNumericInput } from "@/lib/utils";
+import { useQueryParams } from "@/hooks/use-query-params";
 
 const FREQUENCY_MAP: Record<string, number> = {
   monthly: 12,
@@ -34,17 +28,36 @@ const FREQUENCY_MAP: Record<string, number> = {
   annually: 1,
 };
 
+type CompoundInterestParams = {
+  initial?: string;
+  monthly?: string;
+  rate?: string;
+  years?: string;
+  frequency?: string;
+  [key: string]: string | undefined;
+};
+
 export function CompoundInterestCalculator() {
-  const [initialInvestment, setInitialInvestment] = useState("10000");
-  const [monthlyContribution, setMonthlyContribution] = useState("500");
-  const [interestRate, setInterestRate] = useState("7");
-  const [termYears, setTermYears] = useState("10");
-  const [compoundFrequency, setCompoundFrequency] = useState("monthly");
+  const { params, updateParam } = useQueryParams<CompoundInterestParams>();
+
+  const initialInvestment = params.initial || "10000";
+  const monthlyContribution = params.monthly || "500";
+  const interestRate = params.rate || "7";
+  const termYears = params.years || "10";
+  const compoundFrequency = params.frequency || "monthly";
+
+  const handleInputChange =
+    (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+        updateParam(key, value);
+      }
+    };
 
   const results = useMemo(() => {
-    const principal = parseFloat(initialInvestment) || 0;
-    const contribution = parseFloat(monthlyContribution) || 0;
-    const rate = parseFloat(interestRate) || 0;
+    const principal = parseNumericInput(initialInvestment);
+    const contribution = parseNumericInput(monthlyContribution);
+    const rate = parseNumericInput(interestRate);
     const years = parseInt(termYears) || 0;
     const n = FREQUENCY_MAP[compoundFrequency] || 12;
 
@@ -56,19 +69,12 @@ export function CompoundInterestCalculator() {
     const nt = n * years;
     const rOverN = r / n;
 
-    // Future value of initial investment
     const fvPrincipal = principal * Math.pow(1 + rOverN, nt);
 
-    // Future value of regular contributions
-    // Contributions are monthly, but compounding may be different
-    // We approximate by converting monthly contributions to the compounding period
     let fvContributions: number;
     if (rOverN === 0) {
       fvContributions = contribution * 12 * years;
     } else {
-      // Each monthly contribution compounds for a different duration
-      // Simplified: totalContributions * growth factor
-      // More accurate: sum of each monthly contribution compounded
       const totalMonths = years * 12;
       let futureValueOfContributions = 0;
       const monthlyRate = Math.pow(1 + rOverN, n / 12) - 1;
@@ -94,6 +100,39 @@ export function CompoundInterestCalculator() {
     compoundFrequency,
   ]);
 
+  const shareUrl = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const url = new URL(window.location.href);
+    url.searchParams.set("initial", initialInvestment);
+    url.searchParams.set("monthly", monthlyContribution);
+    url.searchParams.set("rate", interestRate);
+    url.searchParams.set("years", termYears);
+    url.searchParams.set("frequency", compoundFrequency);
+    return url.toString();
+  }, [
+    initialInvestment,
+    monthlyContribution,
+    interestRate,
+    termYears,
+    compoundFrequency,
+  ]);
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "FinanceCalc - Compound Interest Calculation",
+          text: "Check out this compound interest calculation",
+          url: shareUrl,
+        });
+      } catch {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+    }
+  };
+
   return (
     <div className="grid gap-8 lg:grid-cols-5">
       <div className="lg:col-span-3">
@@ -108,60 +147,57 @@ export function CompoundInterestCalculator() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="initial-investment">Initial Investment</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="initial-investment"
-                    type="number"
-                    placeholder="10,000"
-                    value={initialInvestment}
-                    onChange={(e) => setInitialInvestment(e.target.value)}
-                    className="pl-8"
-                    min="0"
-                  />
-                </div>
+                <InputWithIcon
+                  id="initial-investment"
+                  icon={DollarSign}
+                  type="number"
+                  placeholder="10,000"
+                  value={initialInvestment}
+                  onChange={handleInputChange("initial")}
+                  min="0"
+                  max="10000000"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="monthly-contribution">
                   Monthly Contribution
                 </Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="monthly-contribution"
-                    type="number"
-                    placeholder="500"
-                    value={monthlyContribution}
-                    onChange={(e) => setMonthlyContribution(e.target.value)}
-                    className="pl-8"
-                    min="0"
-                  />
-                </div>
+                <InputWithIcon
+                  id="monthly-contribution"
+                  icon={DollarSign}
+                  type="number"
+                  placeholder="500"
+                  value={monthlyContribution}
+                  onChange={handleInputChange("monthly")}
+                  min="0"
+                  max="100000"
+                />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="interest-rate">Annual Interest Rate</Label>
-                <div className="relative">
-                  <Percent className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="interest-rate"
-                    type="number"
-                    step="0.1"
-                    placeholder="7"
-                    value={interestRate}
-                    onChange={(e) => setInterestRate(e.target.value)}
-                    className="pl-8"
-                    min="0"
-                  />
-                </div>
+                <InputWithIcon
+                  id="interest-rate"
+                  icon={Percent}
+                  type="number"
+                  step="0.1"
+                  placeholder="7"
+                  value={interestRate}
+                  onChange={handleInputChange("rate")}
+                  min="0"
+                  max="100"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="term">Investment Term</Label>
                 <div className="relative">
                   <Calendar className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Select value={termYears} onValueChange={setTermYears}>
+                  <Select
+                    value={termYears}
+                    onValueChange={(v) => updateParam("years", v)}
+                  >
                     <SelectTrigger id="term" className="w-full pl-8">
                       <SelectValue placeholder="Select term" />
                     </SelectTrigger>
@@ -181,7 +217,7 @@ export function CompoundInterestCalculator() {
               <Label>Compound Frequency</Label>
               <Select
                 value={compoundFrequency}
-                onValueChange={setCompoundFrequency}
+                onValueChange={(v) => updateParam("frequency", v)}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue />
@@ -193,6 +229,14 @@ export function CompoundInterestCalculator() {
                 </SelectContent>
               </Select>
             </div>
+
+            <button
+              onClick={handleShare}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Share2 className="h-4 w-4" />
+              Share this calculation
+            </button>
           </CardContent>
         </Card>
       </div>

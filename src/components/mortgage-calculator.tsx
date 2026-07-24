@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,28 +10,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Home, DollarSign, Percent, Calendar, Calculator } from "lucide-react";
+import {
+  Home,
+  DollarSign,
+  Percent,
+  Calendar,
+  Calculator,
+  Share2,
+} from "lucide-react";
+import { InputWithIcon } from "@/components/input-with-icon";
+import { formatCurrency, parseNumericInput } from "@/lib/utils";
+import { useQueryParams } from "@/hooks/use-query-params";
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+type MortgageParams = {
+  price?: string;
+  deposit?: string;
+  rate?: string;
+  years?: string;
+  type?: string;
+  [key: string]: string | undefined;
+};
 
 export function MortgageCalculator() {
-  const [propertyPrice, setPropertyPrice] = useState("400000");
-  const [deposit, setDeposit] = useState("80000");
-  const [interestRate, setInterestRate] = useState("5.5");
-  const [termYears, setTermYears] = useState("30");
-  const [repaymentType, setRepaymentType] = useState("repayment");
+  const { params, updateParam } = useQueryParams<MortgageParams>();
+
+  const propertyPrice = params.price || "400000";
+  const deposit = params.deposit || "80000";
+  const interestRate = params.rate || "5.5";
+  const termYears = params.years || "30";
+  const repaymentType = params.type || "repayment";
+
+  const handleInputChange =
+    (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+        updateParam(key, value);
+      }
+    };
 
   const results = useMemo(() => {
-    const price = parseFloat(propertyPrice) || 0;
-    const dep = parseFloat(deposit) || 0;
-    const rate = parseFloat(interestRate) || 0;
+    const price = parseNumericInput(propertyPrice);
+    const dep = parseNumericInput(deposit);
+    const rate = parseNumericInput(interestRate);
     const years = parseInt(termYears) || 0;
 
     const principal = Math.max(price - dep, 0);
@@ -59,6 +78,33 @@ export function MortgageCalculator() {
     return { monthlyPayment, totalPaid, totalInterest, principal };
   }, [propertyPrice, deposit, interestRate, termYears, repaymentType]);
 
+  const shareUrl = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const url = new URL(window.location.href);
+    url.searchParams.set("price", propertyPrice);
+    url.searchParams.set("deposit", deposit);
+    url.searchParams.set("rate", interestRate);
+    url.searchParams.set("years", termYears);
+    url.searchParams.set("type", repaymentType);
+    return url.toString();
+  }, [propertyPrice, deposit, interestRate, termYears, repaymentType]);
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "FinanceCalc - Mortgage Calculation",
+          text: "Check out this mortgage calculation",
+          url: shareUrl,
+        });
+      } catch {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+    }
+  };
+
   return (
     <div className="grid gap-8 lg:grid-cols-5">
       <div className="lg:col-span-3">
@@ -73,58 +119,55 @@ export function MortgageCalculator() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="property-price">Property Price</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="property-price"
-                    type="number"
-                    placeholder="400,000"
-                    value={propertyPrice}
-                    onChange={(e) => setPropertyPrice(e.target.value)}
-                    className="pl-8"
-                    min="0"
-                  />
-                </div>
+                <InputWithIcon
+                  id="property-price"
+                  icon={DollarSign}
+                  type="number"
+                  placeholder="400,000"
+                  value={propertyPrice}
+                  onChange={handleInputChange("price")}
+                  min="0"
+                  max="10000000"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="deposit">Deposit</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="deposit"
-                    type="number"
-                    placeholder="80,000"
-                    value={deposit}
-                    onChange={(e) => setDeposit(e.target.value)}
-                    className="pl-8"
-                    min="0"
-                  />
-                </div>
+                <InputWithIcon
+                  id="deposit"
+                  icon={DollarSign}
+                  type="number"
+                  placeholder="80,000"
+                  value={deposit}
+                  onChange={handleInputChange("deposit")}
+                  min="0"
+                  max="10000000"
+                />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="interest-rate">Interest Rate</Label>
-                <div className="relative">
-                  <Percent className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="interest-rate"
-                    type="number"
-                    step="0.1"
-                    placeholder="5.5"
-                    value={interestRate}
-                    onChange={(e) => setInterestRate(e.target.value)}
-                    className="pl-8"
-                    min="0"
-                  />
-                </div>
+                <InputWithIcon
+                  id="interest-rate"
+                  icon={Percent}
+                  type="number"
+                  step="0.1"
+                  placeholder="5.5"
+                  value={interestRate}
+                  onChange={handleInputChange("rate")}
+                  min="0"
+                  max="100"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="term">Mortgage Term</Label>
                 <div className="relative">
                   <Calendar className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Select value={termYears} onValueChange={setTermYears}>
+                  <Select
+                    value={termYears}
+                    onValueChange={(v) => updateParam("years", v)}
+                  >
                     <SelectTrigger id="term" className="w-full pl-8">
                       <SelectValue placeholder="Select term" />
                     </SelectTrigger>
@@ -142,7 +185,10 @@ export function MortgageCalculator() {
 
             <div className="space-y-2">
               <Label>Repayment Type</Label>
-              <Select value={repaymentType} onValueChange={setRepaymentType}>
+              <Select
+                value={repaymentType}
+                onValueChange={(v) => updateParam("type", v)}
+              >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -152,6 +198,14 @@ export function MortgageCalculator() {
                 </SelectContent>
               </Select>
             </div>
+
+            <button
+              onClick={handleShare}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Share2 className="h-4 w-4" />
+              Share this calculation
+            </button>
           </CardContent>
         </Card>
       </div>

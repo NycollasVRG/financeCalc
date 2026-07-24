@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,47 +19,19 @@ import {
   BarChart3,
   ArrowRight,
 } from "lucide-react";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+
+export const metadata: Metadata = {
+  title: "FinanceCalc — Smart Financial Calculators",
+  description:
+    "Calculate mortgage repayments, compound interest, and more with our free, easy-to-use financial calculators.",
+};
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Calculator className="h-4 w-4" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">
-              FinanceCalc
-            </span>
-          </div>
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
-            <a
-              href="#features"
-              className="hover:text-foreground transition-colors"
-            >
-              Features
-            </a>
-            <a
-              href="#calculators"
-              className="hover:text-foreground transition-colors"
-            >
-              Calculators
-            </a>
-            <a
-              href="#benefits"
-              className="hover:text-foreground transition-colors"
-            >
-              Benefits
-            </a>
-          </nav>
-          <Button size="sm">
-            Get Started
-            <ArrowRight className="h-4 w-4" data-icon="inline-end" />
-          </Button>
-        </div>
-      </header>
-
+      <Header />
       <main className="flex-1">
         <section className="mx-auto max-w-5xl px-6 py-24 text-center sm:py-32">
           <div className="mx-auto max-w-2xl">
@@ -195,7 +168,10 @@ export default function LandingPage() {
                     <Button className="w-full" variant="outline" asChild>
                       <Link href="/compound-interest-calculator">
                         Try Compound Interest Calculator
-                        <ArrowRight className="h-4 w-4" data-icon="inline-end" />
+                        <ArrowRight
+                          className="h-4 w-4"
+                          data-icon="inline-end"
+                        />
                       </Link>
                     </Button>
                   </div>
@@ -333,16 +309,7 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Calculator className="h-4 w-4" />
-            <span className="font-medium text-foreground">FinanceCalc</span>
-          </div>
-          <p>&copy; {new Date().getFullYear()} FinanceCalc</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
